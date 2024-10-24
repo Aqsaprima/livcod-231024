@@ -1,4 +1,5 @@
 const { Products, Shops } = require("../models");
+const { Op } = require("sequelize");
 
 const createProduct = async (req, res) => {
   const { name, stock, price, shopId } = req.body;
@@ -49,6 +50,10 @@ const createProduct = async (req, res) => {
 
 const getAllProduct = async (req, res) => {
   try {
+    const { page } = req.query;
+    let pages = 0;
+    if (page) pages = page * 10;
+
     const products = await Products.findAll({
       include: [
         {
@@ -56,13 +61,18 @@ const getAllProduct = async (req, res) => {
           as: "shop",
         },
       ],
+      limit: 10,
+      offset: pages,
     });
+
+    const totalData = products.length;
 
     res.status(200).json({
       status: "Success",
       message: "Success get products data",
       isSuccess: true,
       data: {
+        totalData,
         products,
       },
     });

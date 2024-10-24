@@ -52,7 +52,8 @@ const getAllShop = async (req, res) => {
     // keep request query
     const { shopName, adminEmail, productName, stock, page } = req.query;
     console.log(req.query);
-    const pages = page * 10;
+    let pages = 0;
+    if (page) pages = page * 10;
 
     const condition = {};
     if (shopName) condition.name = { [Op.iLike]: `%${shopName}%` };
@@ -82,6 +83,7 @@ const getAllShop = async (req, res) => {
     });
 
     const totalData = shops.length;
+
     res.status(200).json({
       status: "Success",
       message: "Success get shops data",

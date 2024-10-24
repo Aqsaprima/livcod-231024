@@ -1,12 +1,22 @@
 const { Users } = require("../models");
+const { Op } = require("sequelize");
 
 const findUsers = async (req, res, next) => {
   try {
-    const users = await Users.findAll();
+    const { page } = req.query;
+    let pages = 0;
+    if (page) pages = page * 10;
+    const users = await Users.findAll({
+      limit: 10,
+      offset: pages,
+    });
+
+    const totalData = users.length;
 
     res.status(200).json({
       status: "Success",
       data: {
+        totalData,
         users,
       },
     });
