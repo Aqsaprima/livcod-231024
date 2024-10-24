@@ -1,13 +1,14 @@
 const { Shops, Products, Users } = require("../models");
+const { Op } = require("sequelize");
 
 const createShop = async (req, res) => {
-  const { name, adminEmail } = req.body;
+  const { name, adminEmail, userId } = req.body;
 
   try {
     const newShop = await Shops.create({
       name,
       adminEmail,
-      userId: 1,
+      userId,
     });
 
     res.status(201).json({
@@ -28,37 +29,65 @@ const createShop = async (req, res) => {
         isSuccess: false,
         data: null,
       });
+    } else if (error.name === "SequelizeDatabaseError") {
+      return res.status(400).json({
+        status: "Fail",
+        message: error.message || "database error",
+        isSuccess: false,
+        data: null,
+      });
+    } else {
+      res.status(500).json({
+        status: "Failed",
+        message: "An unexpected Error occured",
+        isSuccess: false,
+        data: null,
+      });
     }
-
-    res.status(500).json({
-      status: "Fail",
-      message: error.message,
-      isSuccess: false,
-      data: null,
-    });
   }
 };
 
 const getAllShop = async (req, res) => {
   try {
+    // keep request query
+    const { shopName, adminEmail, productName, stock, page } = req.query;
+    console.log(req.query);
+    const pages = page * 10;
+
+    const condition = {};
+    if (shopName) condition.name = { [Op.iLike]: `%${shopName}%` };
+
+    const productCondition = {};
+    if (productName) productCondition.name = { [Op.iLike]: `%${productName}%` };
+    if (stock) productCondition.stock = stock;
+
     const shops = await Shops.findAll({
       include: [
         {
           model: Products,
           as: "products",
+          attributes: ["name", "images", "stock", "price"],
+          where: productCondition,
         },
         {
           model: Users,
           as: "user",
+          attributes: ["name"],
         },
       ],
+      attributes: ["id", "name", "adminEmail"],
+      where: condition,
+      limit: 10,
+      offset: pages,
     });
 
+    const totalData = shops.length;
     res.status(200).json({
       status: "Success",
       message: "Success get shops data",
       isSuccess: true,
       data: {
+        totalData,
         shops,
       },
     });
@@ -67,7 +96,7 @@ const getAllShop = async (req, res) => {
     if (error.name === "SequelizeValidationError") {
       const errorMessage = error.errors.map((err) => err.message);
       return res.status(400).json({
-        status: "Fail",
+        status: "Failed",
         message: errorMessage[0],
         isSuccess: false,
         data: null,
@@ -75,7 +104,7 @@ const getAllShop = async (req, res) => {
     }
 
     res.status(500).json({
-      status: "Fail",
+      status: "Failed",
       message: error.message,
       isSuccess: false,
       data: null,
@@ -106,7 +135,7 @@ const getShopById = async (req, res) => {
     if (error.name === "SequelizeValidationError") {
       const errorMessage = error.errors.map((err) => err.message);
       return res.status(400).json({
-        status: "Fail",
+        status: "Failed",
         message: errorMessage[0],
         isSuccess: false,
         data: null,
@@ -114,7 +143,7 @@ const getShopById = async (req, res) => {
     }
 
     res.status(500).json({
-      status: "Fail",
+      status: "Failed",
       message: error.message,
       isSuccess: false,
       data: null,
